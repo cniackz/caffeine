@@ -142,7 +142,7 @@
     
     <!-- Classes -->
     
-        <class name="application" code="capp" description="The Papaya application.">
+        <class name="application" code="capp" description="The Caffeine application.">
             <cocoa class="NSApplication"/>
             <property name="active" code="actv" description="Is Caffeine active?" type="boolean" access="r"><cocoa key="isCaffeineActive"/></property>
 			
