@@ -170,22 +170,28 @@
     return activeAppID && [bundleIDs containsObject:activeAppID];
 }
 
-- (LSSharedFileListItemRef)applicationItemInList:(LSSharedFileListRef)list {
+// Hands back a +1 reference, which is what both callers already release.
+// CF_RETURNS_RETAINED states that so the compiler checks it, since the name
+// does not follow the copy/create convention.
+- (LSSharedFileListItemRef)applicationItemInList:(LSSharedFileListRef)list CF_RETURNS_RETAINED {
 	NSString *appPath = [[NSBundle mainBundle] bundlePath];
-	
+
 	NSArray *items = (id)LSSharedFileListCopySnapshot(list, NULL);
-	for(id item in items) {    
+	LSSharedFileListItemRef found = NULL;
+	for(id item in items) {
 		LSSharedFileListItemRef itemRef = (LSSharedFileListItemRef)item;
 		CFURLRef URL = NULL;
 		if(LSSharedFileListItemResolve(itemRef, 0, &URL, NULL)) continue;
-		
+
 		BOOL matches = [[(NSURL*)URL path] isEqual:appPath];
 		CFRelease(URL);
-		if(matches)
-			return itemRef;
+		if(matches) {
+			found = (LSSharedFileListItemRef)CFRetain(itemRef);
+			break;
+		}
 	}
-	CFRelease(items);
-	return NULL;
+	if(items) CFRelease(items);
+	return found;
 }
 
 - (BOOL)startsAtLogin {
@@ -205,7 +211,10 @@
 	if(start) {
 		NSString *appPath = [[NSBundle mainBundle] bundlePath];
 		CFURLRef appURL = CFURLCreateWithFileSystemPath(NULL, (CFStringRef)appPath, kCFURLPOSIXPathStyle, YES);
-		LSSharedFileListInsertItemURL(loginItems, kLSSharedFileListItemLast, NULL, NULL, appURL, NULL, NULL);
+		// Declared CF_RETURNS_RETAINED in LSSharedFileList.h, so the item it
+		// hands back has to be released too.
+		LSSharedFileListItemRef inserted = LSSharedFileListInsertItemURL(loginItems, kLSSharedFileListItemLast, NULL, NULL, appURL, NULL, NULL);
+		if(inserted) CFRelease(inserted);
 		CFRelease(appURL);
 	}else{
 		LSSharedFileListItemRef item = [self applicationItemInList:loginItems];
