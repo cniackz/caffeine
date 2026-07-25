@@ -12,6 +12,7 @@
 
 - (id)initWithFrame:(NSRect)r {
     self = [super initWithFrame:r];
+    if(!self) return nil;
     statusItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:30] retain];
     [statusItem setVisible:YES];
     [statusItem setView:self];
@@ -122,6 +123,29 @@
         }
     }
     [self setNeedsDisplay];
+}
+
+# pragma mark - Memory Management
+
+// Note this does not currently run either. setView: makes the status item
+// retain this view while the view retains the status item, and the status item
+// is held by the system status bar on top of that; retainCount right after
+// initWithFrame: measures 9, and releasing the app's only reference does not
+// deallocate. Exactly one of these is created, in awakeFromNib, and it lives
+// for the life of the process, which for a menu bar icon is the intended
+// behavior rather than a leak.
+//
+// It is here because the class holds retained ivars and osx.cocoa.Dealloc is
+// right to ask for a correct teardown, not because it fixes an observed fault.
+- (void)dealloc {
+    if (@available(macOS 10.14, *)) {
+        [statusItem removeObserver:self forKeyPath:@"view.effectiveAppearance"];
+    }else{
+        [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"AppleInterfaceStyle"];
+    }
+    [statusItem release];
+    [menu release];
+    [super dealloc];
 }
 
 @end

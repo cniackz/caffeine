@@ -15,7 +15,8 @@
 # pragma mark - Initialization
 
 - (id)init {
-	[super init];
+	self = [super init];
+	if(!self) return nil;
 	timer = [[NSTimer scheduledTimerWithTimeInterval:10.0 target:self selector:@selector(timer:) userInfo:nil repeats:YES] retain];
 	webBaseURL = @"https://www.intelliscapesolutions.com/apps/caffeine";
     
@@ -380,10 +381,17 @@
 
 # pragma mark - Maintenance & Memory Management
 
+// Note this does not currently run. init schedules a repeating timer whose
+// target is self, and the run loop holds that timer, so retainCount never
+// reaches zero. Measured: 2 right after init, 1 after releasing the only
+// reference the app holds. Correct teardown regardless, and it is what
+// osx.cocoa.Dealloc is asking for.
 - (void)dealloc {
+    [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
     [timer invalidate];
     [timer release];
     [menuView release];
+    [timeoutTimer invalidate];
     [timeoutTimer release];
     [super dealloc];
 }
