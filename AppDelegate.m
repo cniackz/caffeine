@@ -311,6 +311,27 @@
 
 # pragma mark - Help & Feedback Window Utility Methods
 
+// Each open used to allocate another WKWebView and stack it on the one already
+// there, so a window accumulated a full web view, and its WebContent process,
+// per visit. Reuse the one the window already holds.
+//
+// The window's content view owns the web view, so nothing here retains it. Both
+// of these windows are releasedWhenClosed="NO" in the nib, so it survives being
+// closed. The frame is refreshed on reuse in case the window ever becomes
+// resizable.
+- (WKWebView *)webViewForWindow:(NSWindow *)window {
+    NSView *contentView = [window contentView];
+    for(NSView *subview in [contentView subviews]) {
+        if([subview isKindOfClass:[WKWebView class]]) {
+            [subview setFrame:[contentView frame]];
+            return (WKWebView *)subview;
+        }
+    }
+    WKWebView *webView = [[[WKWebView alloc] initWithFrame:[contentView frame]] autorelease];
+    [contentView addSubview:webView];
+    return webView;
+}
+
 -(IBAction)launchHelpCenter:(id)sender {
     [helpCenterWindow center];
     [helpCenterWindow setIsVisible:YES];
@@ -331,9 +352,7 @@
     NSURL *nsurl=[NSURL URLWithString:[NSString stringWithFormat:@"%@%@", webBaseURL, @"/feedback"]];
     if (NSClassFromString(@"WKWebView")) {
         NSURLRequest *nsrequest=[NSURLRequest requestWithURL:nsurl];
-        WKWebView *feedbackWebView = [[WKWebView alloc] initWithFrame:[[feedbackWindow contentView] frame]];
-        [feedbackWebView loadRequest:nsrequest];
-        [[feedbackWindow contentView] addSubview:feedbackWebView];
+        [[self webViewForWindow:feedbackWindow] loadRequest:nsrequest];
         [feedbackWindow center];
         [feedbackWindow setIsVisible:YES];
         [feedbackWindow makeKeyAndOrderFront:nil];
@@ -346,9 +365,7 @@
     NSURL *nsurl=[NSURL URLWithString:[NSString stringWithFormat:@"%@%@", webBaseURL, @"/donate"]];
     if (NSClassFromString(@"WKWebView")) {
         NSURLRequest *nsrequest=[NSURLRequest requestWithURL:nsurl];
-        WKWebView *donateWebView = [[WKWebView alloc] initWithFrame:[[donateWindow contentView] frame]];
-        [donateWebView loadRequest:nsrequest];
-        [[donateWindow contentView] addSubview:donateWebView];
+        [[self webViewForWindow:donateWindow] loadRequest:nsrequest];
         [donateWindow center];
         [donateWindow setIsVisible:YES];
         [donateWindow makeKeyAndOrderFront:nil];
