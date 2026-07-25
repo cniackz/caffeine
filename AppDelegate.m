@@ -50,9 +50,6 @@
 # pragma mark - Activation & Deactivation Methods
 
 - (void)activateWithTimeoutDuration:(NSTimeInterval)interval {
-    if(![self checkForAccessibilityPermission]) {
-        return;
-    };
 	if(timeoutTimer) [[timeoutTimer autorelease] invalidate];
 	timeoutTimer = nil;
 	if(interval > 0)
